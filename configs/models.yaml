@@ -1,0 +1,145 @@
+# Model configurations for FreeRouter
+# This file defines the capabilities and characteristics of available models
+
+default_config:
+  timeout: 30
+  max_retries: 3
+  rate_limit:
+    requests_per_minute: 20
+    requests_per_hour: 200
+
+# Model capability profiles
+# Each model is rated 1-5 for different capabilities
+model_profiles:
+  # Coding models
+  "openai/gpt-3.5-turbo":
+    capabilities:
+      coding: 4
+      reasoning: 4
+      creative_writing: 3
+      analysis: 4
+      conversation: 4
+      math: 4
+    specialties:
+      - "general purpose"
+      - "coding"
+      - "reasoning"
+    context_window: 4096
+    cost_tier: "free"
+    
+  "anthropic/claude-3-haiku":
+    capabilities:
+      coding: 3
+      reasoning: 4
+      creative_writing: 4
+      analysis: 4
+      conversation: 5
+      math: 3
+    specialties:
+      - "conversation"
+      - "creative writing"
+      - "analysis"
+    context_window: 8192
+    cost_tier: "free"
+    
+  "google/gemma-7b-it":
+    capabilities:
+      coding: 3
+      reasoning: 3
+      creative_writing: 3
+      analysis: 3
+      conversation: 3
+      math: 2
+    specialties:
+      - "general purpose"
+    context_window: 8192
+    cost_tier: "free"
+
+# Query type mappings
+query_types:
+  coding:
+    keywords:
+      - "code"
+      - "function"
+      - "program"
+      - "script"
+      - "debug"
+      - "algorithm"
+      - "python"
+      - "javascript"
+      - "java"
+      - "c++"
+      - "sql"
+    patterns:
+      - "how to.*code"
+      - "write.*function"
+      - "implement.*algorithm"
+      - "debug.*error"
+    preferred_models:
+      - "openai/gpt-3.5-turbo"
+      - "anthropic/claude-3-haiku"
+      
+  creative_writing:
+    keywords:
+      - "story"
+      - "poem"
+      - "creative"
+      - "write"
+      - "narrative"
+      - "fiction"
+      - "character"
+    patterns:
+      - "write.*story"
+      - "create.*poem"
+      - "tell.*tale"
+    preferred_models:
+      - "anthropic/claude-3-haiku"
+      - "openai/gpt-3.5-turbo"
+      
+  analysis:
+    keywords:
+      - "analyze"
+      - "compare"
+      - "evaluate"
+      - "assess"
+      - "review"
+      - "critique"
+    patterns:
+      - "analyze.*data"
+      - "compare.*options"
+      - "what.*difference"
+    preferred_models:
+      - "anthropic/claude-3-haiku"
+      - "openai/gpt-3.5-turbo"
+      
+  math:
+    keywords:
+      - "calculate"
+      - "solve"
+      - "equation"
+      - "formula"
+      - "math"
+      - "statistics"
+    patterns:
+      - "solve.*equation"
+      - "calculate.*value"
+      - "find.*solution"
+    preferred_models:
+      - "openai/gpt-3.5-turbo"
+      
+  conversation:
+    keywords:
+      - "hello"
+      - "hi"
+      - "help"
+      - "explain"
+      - "what"
+      - "how"
+      - "why"
+    patterns:
+      - "can you.*help"
+      - "what.*is"
+      - "how.*does"
+    preferred_models:
+      - "anthropic/claude-3-haiku"
+      - "openai/gpt-3.5-turbo"
