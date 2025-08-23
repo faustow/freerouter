@@ -9,11 +9,11 @@ __version__ = "0.1.0"
 __author__ = "FreeRouter Team"
 __email__ = "contact@freerouter.dev"
 
-from .router import FreeRouter
-from .client import OpenRouterClient
-from .analyzer import QueryAnalyzer
-from .evaluator import ModelEvaluator
-from .models import ModelManager
+from .freerouter.router import FreeRouter
+from .freerouter.client import OpenRouterClient
+from .freerouter.analyzer import QueryAnalyzer
+from .freerouter.evaluator import ModelEvaluator
+from .freerouter.models import ModelManager
 
 __all__ = [
     "FreeRouter",

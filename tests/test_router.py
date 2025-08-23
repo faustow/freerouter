@@ -3,7 +3,7 @@ Tests for the FreeRouter core routing logic.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, patch
 
 from freerouter.freerouter.router import FreeRouter, CapabilityBasedStrategy, RoutingDecision
 from freerouter.freerouter.analyzer import QueryType, QueryComplexity
@@ -12,9 +12,14 @@ from freerouter.freerouter.analyzer import QueryType, QueryComplexity
 class TestCapabilityBasedStrategy:
     """Test cases for CapabilityBasedStrategy."""
     
-    def test_select_model_coding_query(self, mock_config, mock_model_manager):
+    def test_select_model_coding_query(self, mock_config, mock_model_profiles):
         """Test model selection for coding queries."""
         from freerouter.freerouter.analyzer import QueryAnalysis, QueryFeatures
+        from freerouter.freerouter.models import ModelManager
+        
+        # Create a real model manager with mock profiles
+        mock_model_manager = Mock(spec=ModelManager)
+        mock_model_manager.get_model_profile = Mock(side_effect=lambda model_id: mock_model_profiles.get(model_id))
         
         strategy = CapabilityBasedStrategy()
         
@@ -32,11 +37,17 @@ class TestCapabilityBasedStrategy:
         
         assert decision.selected_model in available_models
         assert decision.confidence > 0
-        assert "coding" in decision.reasoning.lower()
+        # Should prefer test/model-1 which is better at coding
+        assert decision.selected_model == "test/model-1"
     
-    def test_select_model_creative_query(self, mock_config, mock_model_manager):
+    def test_select_model_creative_query(self, mock_config, mock_model_profiles):
         """Test model selection for creative writing queries."""
         from freerouter.freerouter.analyzer import QueryAnalysis, QueryFeatures
+        from freerouter.freerouter.models import ModelManager
+        
+        # Create a real model manager with mock profiles
+        mock_model_manager = Mock(spec=ModelManager)
+        mock_model_manager.get_model_profile = Mock(side_effect=lambda model_id: mock_model_profiles.get(model_id))
         
         strategy = CapabilityBasedStrategy()
         

@@ -22,32 +22,14 @@ from tenacity import (
 )
 
 from .config import Config, get_config
+from .exceptions import (
+    OpenRouterError, 
+    RateLimitError, 
+    ModelNotFoundError, 
+    APIError
+)
 
 logger = logging.getLogger(__name__)
-
-
-class OpenRouterError(Exception):
-    """Base exception for OpenRouter API errors."""
-    pass
-
-
-class RateLimitError(OpenRouterError):
-    """Raised when rate limit is exceeded."""
-    def __init__(self, message: str, retry_after: Optional[int] = None):
-        super().__init__(message)
-        self.retry_after = retry_after
-
-
-class ModelNotFoundError(OpenRouterError):
-    """Raised when a requested model is not found."""
-    pass
-
-
-class APIError(OpenRouterError):
-    """Raised for general API errors."""
-    def __init__(self, message: str, status_code: Optional[int] = None):
-        super().__init__(message)
-        self.status_code = status_code
 
 
 @dataclass
@@ -197,14 +179,22 @@ class OpenRouterClient:
         except (json.JSONDecodeError, KeyError):
             error_message = f"HTTP {response.status_code}: {response.text}"
         
-        if response.status_code == 429:
+        if response.status_code == 401:
+            raise OpenRouterError(f"Authentication failed: {error_message}")
+        elif response.status_code == 403:
+            raise OpenRouterError(f"Access forbidden: {error_message}")
+        elif response.status_code == 429:
             retry_after = response.headers.get('retry-after')
             retry_after_int = int(retry_after) if retry_after else None
             raise RateLimitError(error_message, retry_after_int)
         elif response.status_code == 404:
-            raise ModelNotFoundError(error_message)
+            # Extract model ID from error message if possible, otherwise use "unknown"
+            model_id = error_message.lower().replace("model not found:", "").strip() or "unknown"
+            raise ModelNotFoundError(model_id)
+        elif response.status_code >= 500:
+            raise OpenRouterError(f"Server error: {error_message}")
         else:
-            raise APIError(error_message, response.status_code)
+            raise APIError(error_message, status_code=response.status_code)
     
     @retry(
         stop=stop_after_attempt(3),

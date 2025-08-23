@@ -176,13 +176,14 @@ def sample_queries():
 @pytest.fixture
 def mock_model_profiles():
     """Create mock model profiles for testing."""
-    from freerouter.freerouter.models import ModelProfile, PerformanceMetrics, CapabilityScore
+    from freerouter.freerouter.models import ModelProfile, PerformanceMetrics, CapabilityScore, ModelStatus
     from datetime import datetime
     
     profiles = {}
     
     # Model 1: Good at coding
     profile1 = ModelProfile(model_id="test/model-1")
+    profile1.status = ModelStatus.AVAILABLE
     profile1.capabilities = {
         "coding": CapabilityScore(score=4.5, confidence=0.9, sample_count=10),
         "reasoning": CapabilityScore(score=3.5, confidence=0.8, sample_count=8),
@@ -199,6 +200,7 @@ def mock_model_profiles():
     
     # Model 2: Good at creative writing
     profile2 = ModelProfile(model_id="test/model-2")
+    profile2.status = ModelStatus.AVAILABLE
     profile2.capabilities = {
         "creative_writing": CapabilityScore(score=4.8, confidence=0.9, sample_count=15),
         "analysis": CapabilityScore(score=4.2, confidence=0.8, sample_count=10),

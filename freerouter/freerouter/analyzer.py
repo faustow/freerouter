@@ -105,7 +105,10 @@ class QueryAnalyzer:
         self.math_indicators = {
             'equation', 'formula', 'calculate', 'solve', 'derivative',
             'integral', 'matrix', 'vector', 'probability', 'statistics',
-            'algebra', 'geometry', 'calculus', 'trigonometry', 'logarithm'
+            'algebra', 'geometry', 'calculus', 'trigonometry', 'logarithm',
+            'percent', 'percentage', '%', 'area', 'volume', 'radius',
+            'find', 'sum', 'product', 'difference', 'quotient', 'factorial',
+            'square', 'cube', 'root', 'power'
         }
         
         # Creative writing indicators
@@ -164,6 +167,10 @@ class QueryAnalyzer:
         has_creative_indicators = any(indicator in query_lower for indicator in self.creative_indicators)
         has_analysis_indicators = any(indicator in query_lower for indicator in self.analysis_indicators)
         has_reasoning_indicators = any(indicator in query_lower for indicator in self.reasoning_indicators)
+        
+        # Additional math pattern detection in features  
+        if re.search(r'%|percent', query_lower) or re.search(r'\d+.*[+\-*/].*\d+', query):
+            has_math_indicators = True
         
         # Detect programming languages
         programming_languages = set()
@@ -265,6 +272,7 @@ class QueryAnalyzer:
     
     def _calculate_type_scores(
         self,
+        query: str,
         features: QueryFeatures,
         matches: Dict[str, Tuple[List[str], List[str]]]
     ) -> Dict[QueryType, float]:
@@ -286,6 +294,19 @@ class QueryAnalyzer:
         
         if features.has_math_indicators:
             scores[QueryType.MATH] += 3.0
+        
+        # Additional math pattern detection
+        query_lower = query.lower()
+        
+        # Check for mathematical operators and number patterns
+        if re.search(r'\b\d+\s*[+\-*/]\s*\d+\b', query):
+            scores[QueryType.MATH] += 4.0
+        elif re.search(r'what.*is.*\d+.*[+\-*/]', query_lower):
+            scores[QueryType.MATH] += 4.0
+        elif re.search(r'\d+%.*of', query_lower):
+            scores[QueryType.MATH] += 3.0
+        elif any(op in query_lower for op in [' + ', ' - ', ' * ', ' / ', 'plus', 'minus', 'times', 'divided']):
+            scores[QueryType.MATH] += 2.0
         
         if features.has_creative_indicators:
             scores[QueryType.CREATIVE_WRITING] += 2.0
@@ -340,7 +361,7 @@ class QueryAnalyzer:
         matches = self._match_keywords_and_patterns(query)
         
         # Calculate type scores
-        type_scores = self._calculate_type_scores(features, matches)
+        type_scores = self._calculate_type_scores(query, features, matches)
         
         # Determine primary and secondary types
         sorted_types = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)

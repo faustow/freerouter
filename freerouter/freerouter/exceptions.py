@@ -46,7 +46,8 @@ class RateLimitError(OpenRouterError):
     """Raised when rate limit is exceeded."""
     
     def __init__(self, message: str, retry_after: Optional[int] = None):
-        super().__init__(message, error_code="RATE_LIMIT")
+        super().__init__(message)
+        self.error_code = "RATE_LIMIT"
         self.retry_after = retry_after
 
 
@@ -54,7 +55,8 @@ class ModelNotFoundError(OpenRouterError):
     """Raised when a requested model is not found."""
     
     def __init__(self, model_id: str):
-        super().__init__(f"Model not found: {model_id}", error_code="MODEL_NOT_FOUND")
+        super().__init__(f"Model not found: {model_id}")
+        self.error_code = "MODEL_NOT_FOUND"
         self.model_id = model_id
 
 

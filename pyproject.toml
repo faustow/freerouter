@@ -48,7 +48,7 @@ mypy = "^1.10.0"
 pre-commit = "^3.7.0"
 
 [tool.poetry.scripts]
-freerouter = "freerouter.cli:main"
+freerouter = "freerouter.freerouter.cli:main"
 
 [tool.black]
 line-length = 88
