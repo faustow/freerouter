@@ -1,24 +1,12 @@
 """
-FreeRouter - Intelligent Model Router for OpenRouter Free Models
+FreeRouter: Model routing for resource-constrained developers.
 
-A production-ready Python application that intelligently routes user queries 
-to the most appropriate free model available on OpenRouter.
+The open-source model router that leverages free models from OpenRouter
+to provide intelligent routing with cost optimization.
 """
 
+from .controller import Controller
+from .exceptions import FreeRouterError, RateLimitError, ModelUnavailableError
+
 __version__ = "0.1.0"
-__author__ = "FreeRouter Team"
-__email__ = "contact@freerouter.dev"
-
-from .freerouter.router import FreeRouter
-from .freerouter.client import OpenRouterClient
-from .freerouter.analyzer import QueryAnalyzer
-from .freerouter.evaluator import ModelEvaluator
-from .freerouter.models import ModelManager
-
-__all__ = [
-    "FreeRouter",
-    "OpenRouterClient", 
-    "QueryAnalyzer",
-    "ModelEvaluator",
-    "ModelManager",
-]
+__all__ = ["Controller", "FreeRouterError", "RateLimitError", "ModelUnavailableError"]
