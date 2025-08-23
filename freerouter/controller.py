@@ -6,6 +6,9 @@ import json
 
 from .openrouter_client import OpenRouterClient, ChatCompletionRequest
 from .semantic_router import SemanticRouter
+from .matrix_factorization_router import MatrixFactorizationRouter
+from .random_forest_router import RandomForestRouter
+from .performance_monitor import PerformanceMonitor
 from .models import RouterConfig, RouteDecision, IntentType, FREE_MODELS
 from .exceptions import FreeRouterError, ModelUnavailableError, RateLimitError
 
@@ -19,24 +22,35 @@ class Controller:
         routing_model: str = "semantic",
         model_pool: str = "openrouter-free",
         precision_threshold: float = 0.3,
+        mf_router: Optional[MatrixFactorizationRouter] = None,
+        rf_router: Optional[RandomForestRouter] = None,
+        enable_monitoring: bool = True,
         **kwargs
     ):
         """Initialize the FreeRouter controller.
         
         Args:
             api_key: OpenRouter API key
-            routing_model: Routing strategy ("semantic", "mf", "rf")
+            routing_model: Routing strategy ("semantic", "mf", "rf", "hybrid")
             model_pool: Model pool to use ("openrouter-free")
             precision_threshold: Routing precision threshold (0.1-0.9)
+            mf_router: Pre-trained Matrix Factorization router
+            rf_router: Pre-trained Random Forest router
+            enable_monitoring: Enable performance monitoring
         """
         self.client = OpenRouterClient(api_key)
         self.semantic_router = SemanticRouter()
+        self.mf_router = mf_router
+        self.rf_router = rf_router
         self.config = RouterConfig(
             precision_threshold=precision_threshold,
             **kwargs
         )
         self.routing_model = routing_model
         self.model_pool = model_pool
+        
+        # Performance monitoring
+        self.performance_monitor = PerformanceMonitor() if enable_monitoring else None
         
         # Statistics tracking
         self.routing_stats = {
@@ -133,7 +147,7 @@ class Controller:
                 fallback_models=[m for m in available_models if m != preferred_model]
             )
         
-        # Use semantic routing
+        # Route based on selected algorithm
         if self.routing_model == "semantic":
             model_id, intent, confidence = self.semantic_router.route_query(
                 query, 
@@ -149,24 +163,89 @@ class Controller:
             
             fallback_models = [m for m in available_models if m != model_id]
             
-            return RouteDecision(
-                model_id=model_id,
+        elif self.routing_model == "mf" and self.mf_router is not None:
+            # Matrix Factorization routing
+            model_id, confidence, reasoning = self.mf_router.route_query(
+                query, available_models, self.config.precision_threshold
+            )
+            intent, _ = self.semantic_router.classify_intent(query)
+            self.routing_stats["intent_distribution"][intent.value] += 1
+            fallback_models = [m for m in available_models if m != model_id]
+            
+        elif self.routing_model == "rf" and self.rf_router is not None:
+            # Random Forest routing
+            model_id, confidence, reasoning = self.rf_router.route_query(
+                query, available_models, self.config.precision_threshold
+            )
+            intent, _ = self.semantic_router.classify_intent(query)
+            self.routing_stats["intent_distribution"][intent.value] += 1
+            fallback_models = [m for m in available_models if m != model_id]
+            
+        elif self.routing_model == "hybrid":
+            # Hybrid routing: try MF first, then RF, then semantic
+            model_id = None
+            confidence = 0.0
+            reasoning = ""
+            
+            if self.mf_router is not None:
+                try:
+                    model_id, confidence, reasoning = self.mf_router.route_query(
+                        query, available_models, self.config.precision_threshold
+                    )
+                    if confidence >= self.config.precision_threshold:
+                        reasoning = f"MF: {reasoning}"
+                    else:
+                        model_id = None  # Try RF instead
+                except Exception:
+                    model_id = None
+            
+            if model_id is None and self.rf_router is not None:
+                try:
+                    model_id, confidence, reasoning = self.rf_router.route_query(
+                        query, available_models, self.config.precision_threshold
+                    )
+                    reasoning = f"RF: {reasoning}"
+                except Exception:
+                    model_id = None
+            
+            if model_id is None:
+                # Fallback to semantic routing
+                model_id, intent, confidence = self.semantic_router.route_query(
+                    query, available_models, self.config.precision_threshold
+                )
+                reasoning = f"Semantic (fallback): {self.semantic_router.explain_routing(query, model_id, intent, confidence)}"
+            
+            intent, _ = self.semantic_router.classify_intent(query)
+            self.routing_stats["intent_distribution"][intent.value] += 1
+            fallback_models = [m for m in available_models if m != model_id]
+            
+        else:
+            # Fallback to semantic routing if advanced routers not available
+            model_id, intent, confidence = self.semantic_router.route_query(
+                query, available_models, self.config.precision_threshold
+            )
+            self.routing_stats["intent_distribution"][intent.value] += 1
+            reasoning = f"Semantic (default): {self.semantic_router.explain_routing(query, model_id, intent, confidence)}"
+            fallback_models = [m for m in available_models if m != model_id]
+        
+        # Record routing decision for monitoring
+        if self.performance_monitor:
+            self.performance_monitor.record_routing_decision(
+                query=query,
+                router_type=self.routing_model,
+                predicted_model=model_id,
+                actual_model=model_id,  # Will be updated if fallback is used
                 confidence=confidence,
                 intent=intent,
-                reasoning=reasoning,
-                fallback_models=fallback_models
+                was_fallback=False
             )
-        
-        # Fallback to first available model
-        model_id = available_models[0]
-        intent = IntentType.GENERAL
         
         return RouteDecision(
             model_id=model_id,
-            confidence=0.5,
+            confidence=confidence,
             intent=intent,
-            reasoning=f"Default routing to {model_id}",
-            fallback_models=available_models[1:]
+            reasoning=reasoning,
+            fallback_models=fallback_models
         )
     
     async def _handle_fallback(
