@@ -295,7 +295,9 @@ class ModelManager:
                 # Update from configuration if available
                 config_profile = self.config.get_model_config(model_id)
                 if config_profile:
-                    for capability, score in asdict(config_profile.capabilities).items():
+                    # Use model_dump() for Pydantic models instead of asdict for dataclasses
+                    capabilities_dict = config_profile.capabilities.model_dump()
+                    for capability, score in capabilities_dict.items():
                         profile.update_capability(capability, score, confidence=0.5)
                     profile.specialties = config_profile.specialties
                 
